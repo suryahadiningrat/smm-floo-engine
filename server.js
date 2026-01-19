@@ -1,6 +1,8 @@
 const express = require('express');
 require('dotenv').config();
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const userRoutes = require('./routes/userRoutes');
+const projectRoutes = require('./routes/projectRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,7 +21,9 @@ app.get('/', (req, res) => {
 });
 
 // Mount Routes
-app.use('/api/v1', analyticsRoutes);
+app.use('/api/v1/analytics', analyticsRoutes); // Changed base path to separate concerns
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/projects', projectRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

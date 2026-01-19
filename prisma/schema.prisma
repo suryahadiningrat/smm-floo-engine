@@ -1,0 +1,292 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["public", "master", "metric"]
+}
+
+// Master Tables
+model Plan {
+  id            Int     @id @default(autoincrement())
+  name          String
+  price         Int
+  project_limit Int
+  users         User[]
+
+  @@schema("master")
+  @@map("plan")
+}
+
+model User {
+  id         Int       @id @default(autoincrement())
+  plan_id    Int
+  email      String
+  username   String
+  created_at DateTime  @default(now())
+  plan       Plan      @relation(fields: [plan_id], references: [id])
+  projects   Project[]
+
+  @@schema("master")
+  @@map("users")
+}
+
+model Project {
+  id                       Int                      @id @default(autoincrement())
+  user_id                  Int
+  slug                     String
+  name                     String
+  metricool_user_id        String?
+  metricool_blog_id        String?
+  user                     User                     @relation(fields: [user_id], references: [id])
+  instagramAccounts        InstagramAccount[]
+  instagramContents        InstagramContent[]
+  instagramContentSummaries InstagramContentSummary[]
+  instagramComments        InstagramComment[]
+  platformAccountSummaries PlatformAccountSummary[]
+  tiktokAccounts           TiktokAccount[]
+  tiktokContents           TiktokContent[]
+  tiktokContentSummaries   TiktokContentSummary[]
+  youtubeAccounts          YoutubeAccount[]
+  youtubeContents          YoutubeContent[]
+  youtubeContentSummaries  YoutubeContentSummary[]
+
+  @@schema("master")
+  @@map("projects")
+}
+
+// Metric Tables
+
+enum ProjectPlatform {
+  instagram
+  tiktok
+  youtube
+  // facebook
+  // linkedin
+  // x
+  
+  @@schema("metric")
+}
+
+model PlatformAccountSummary {
+  id        Int             @id @default(autoincrement())
+  platform  ProjectPlatform
+  project_id Int
+  username  String
+  posts     Int             @default(0)
+  followers Int             @default(0)
+  following Int             @default(0)
+  project   Project         @relation(fields: [project_id], references: [id])
+
+  @@schema("metric")
+  @@map("platform_account_summary")
+}
+
+// Instagram
+enum InstagramType {
+  post
+  reels
+  story
+
+  @@schema("metric")
+}
+
+model InstagramAccount {
+  id         Int      @id @default(autoincrement())
+  project_id Int
+  username   String
+  posts      Int      @default(0)
+  followers  Int      @default(0)
+  following  Int      @default(0)
+  created_at DateTime @default(now())
+  project    Project  @relation(fields: [project_id], references: [id])
+
+  @@schema("metric")
+  @@map("instagram_account")
+}
+
+model InstagramContent {
+  id          Int           @id @default(autoincrement())
+  project_id  Int
+  username    String
+  type        InstagramType
+  content_id  String        // ID Content
+  caption     String?       @db.Text
+  media_url   String?       @db.Text
+  views       Int           @default(0) // Untuk video
+  impression  Int           @default(0) // Untuk post
+  reach       Int           @default(0)
+  like        Int           @default(0)
+  comment     Int           @default(0)
+  share       Int           @default(0)
+  saved       Int           @default(0) // Added per user request
+  repost      Int           @default(0)
+  published_at DateTime?    // Added for date filtering
+  created_at  DateTime      @default(now())
+  project     Project       @relation(fields: [project_id], references: [id])
+
+  @@schema("metric")
+  @@map("instagram_content")
+}
+
+model InstagramContentSummary {
+  id          Int           @id @default(autoincrement())
+  project_id  Int
+  username    String
+  type        InstagramType
+  content_id  String        // ID Content
+  caption     String?       @db.Text
+  media_url   String?       @db.Text
+  views       Int           @default(0) // Untuk video
+  impression  Int           @default(0) // Untuk post
+  reach       Int           @default(0)
+  like        Int           @default(0)
+  comment     Int           @default(0)
+  share       Int           @default(0)
+  saved       Int           @default(0) // Added per user request
+  repost      Int           @default(0)
+  published_at DateTime?    // Added for date filtering
+  project     Project       @relation(fields: [project_id], references: [id])
+
+  @@schema("metric")
+  @@map("instagram_content_summary")
+}
+
+model InstagramComment {
+  id                  Int      @id @default(autoincrement())
+  project_id          Int
+  content_id          String
+  commenters_username String
+  text                String?  @db.Text
+  comments_like       Int      @default(0)
+  comments_count      Int      @default(0)
+  created_at          DateTime
+  fetched_at          DateTime @default(now())
+  project             Project  @relation(fields: [project_id], references: [id])
+
+  @@schema("metric")
+  @@map("instagram_comments")
+}
+
+// TikTok
+model TiktokAccount {
+  id         Int      @id @default(autoincrement())
+  project_id Int
+  username   String
+  posts      Int      @default(0)
+  followers  Int      @default(0)
+  following  Int      @default(0)
+  created_at DateTime @default(now())
+  project    Project  @relation(fields: [project_id], references: [id])
+
+  @@schema("metric")
+  @@map("tiktok_account")
+}
+
+model TiktokContent {
+  id          Int      @id @default(autoincrement())
+  project_id  Int
+  username    String
+  content_id  String   // ID Video
+  caption     String?  @db.Text
+  media_url   String?  @db.Text
+  view        Int      @default(0)
+  reach       Int      @default(0)
+  like        Int      @default(0)
+  comment     Int      @default(0)
+  share       Int      @default(0)
+  repost      Int      @default(0)
+  created_at  DateTime @default(now())
+  project     Project  @relation(fields: [project_id], references: [id])
+
+  @@schema("metric")
+  @@map("tiktok_content")
+}
+
+model TiktokContentSummary {
+  id          Int      @id @default(autoincrement())
+  project_id  Int
+  username    String
+  content_id  String   // ID Video
+  caption     String?  @db.Text
+  media_url   String?  @db.Text
+  posts       Int      @default(0)
+  view        Int      @default(0)
+  reach       Int      @default(0)
+  like        Int      @default(0)
+  comment     Int      @default(0)
+  share       Int      @default(0)
+  repost      Int      @default(0)
+  project     Project  @relation(fields: [project_id], references: [id])
+
+  @@schema("metric")
+  @@map("tiktok_content_summary")
+}
+
+// YouTube
+enum YoutubeType {
+  short
+  story
+  video
+
+  @@schema("metric")
+}
+
+model YoutubeAccount {
+  id         Int      @id @default(autoincrement())
+  project_id Int
+  username   String
+  followers  Int      @default(0)
+  following  Int      @default(0)
+  created_at DateTime @default(now())
+  project    Project  @relation(fields: [project_id], references: [id])
+
+  @@schema("metric")
+  @@map("youtube_account")
+}
+
+model YoutubeContent {
+  id          Int         @id @default(autoincrement())
+  project_id  Int
+  username    String
+  type        YoutubeType
+  content_id  String      // ID Video
+  caption     String?     @db.Text
+  media_url   String?     @db.Text
+  posts       Int         @default(0)
+  view        Int         @default(0)
+  reach       Int         @default(0)
+  like        Int         @default(0)
+  comment     Int         @default(0)
+  share       Int         @default(0)
+  created_at  DateTime    @default(now())
+  project     Project     @relation(fields: [project_id], references: [id])
+
+  @@schema("metric")
+  @@map("youtube_content")
+}
+
+model YoutubeContentSummary {
+  id          Int         @id @default(autoincrement())
+  project_id  Int
+  username    String
+  type        YoutubeType
+  content_id  String      // ID Video
+  caption     String?     @db.Text
+  media_url   String?     @db.Text
+  posts       Int         @default(0)
+  view        Int         @default(0)
+  reach       Int         @default(0)
+  like        Int         @default(0)
+  comment     Int         @default(0)
+  share       Int         @default(0)
+  project     Project     @relation(fields: [project_id], references: [id])
+
+  @@schema("metric")
+  @@map("youtube_content_summary")
+}
