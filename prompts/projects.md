@@ -32,22 +32,27 @@ The following workflows define the data acquisition and processing strategy.
 2.  **Data Serving**: API serves data from `metric.instagram_content_summary` (fast access) or `metric.instagram_content` (historical analysis), bypassing direct Metricool calls for stored data.
 3.  **Account Growth**: `instagram_account` table provides daily snapshots of followers and posts count, allowing efficient date-range queries (e.g., "Last 30 days growth").
 
+### D. AI Analysis (Sentiment)
+1.  **Trigger**: User triggers analysis for a specific post via `/instagram/post-analyze`.
+2.  **Processing**: Background job runs Llama 3.2 on comments with `sentiment` = null.
+3.  **Result**: Updates `sentiment` in `instagram_comments` and stores full JSON report in `storage/analysis_results`.
+
 ## 4. User Experience per page
 *Note: As this is an API-first project, "pages" refer to API Endpoint Groups consumed by the Client/Frontend.*
 
 ### A. Dashboard - Instagram Overview
 -   **User Action**: Opens Instagram Analytics Dashboard.
--   **API Call**: `GET /api/v1/instagram/account`
+-   **API Call**: `GET /api/instagram/account`
 -   **Experience**: Instant load of Account Growth (Followers, Following, Posts) and Content Summary. Data is served from local DB.
 
 ### B. Dashboard - Community / Demographics
 -   **User Action**: Views Audience Demographics.
--   **API Call**: `GET /api/v1/instagram/community`
+-   **API Call**: `GET /api/instagram/community`
 -   **Experience**: Fetches fresh data (proxied to Metricool if not cached) to show Age, Gender, and City distributions.
 
 ### C. Dashboard - Posts & Content
 -   **User Action**: Views list of recent posts/stories/reels.
--   **API Call**: `GET /api/v1/instagram/posts`, `/reels`, or `/stories`
+-   **API Call**: `GET /api/instagram/posts`, `/reels`, or `/stories`
 -   **Experience**: Displays paginated list of content with metrics (Reach, Impressions, Engagement). Data allows filtering by date range using `published_at`.
     -   **Posts**: Returns `id`, `media_url`, `caption`, `date`, `views` (impression+views), `interaction` (likes+comments+shares), etc.
     -   **Reels**: Returns similar to posts plus `reposts`.
@@ -167,19 +172,26 @@ The following workflows define the data acquisition and processing strategy.
 - [x] **Verify API Accuracy** against Metricool responses (Followers verified, Posts/Following constrained by API availability).
 - [x] **Fix Content Sync Accuracy**: Corrected `username` (fdrtire), `content_id` (shortcode), `caption`, and metrics (`saved` added).
 - [x] **Implement Content List Endpoints**: `/instagram/posts`, `/instagram/reels`, `/instagram/stories` with specific JSON structures.
-- [x] **Cleanup & Standardization**: Deleted unused non-Instagram endpoints. Standardized all endpoints to use `start_date` and `end_date`. Verified engine script independence.
+170. - [x] **Cleanup & Standardization**: Deleted unused non-Instagram endpoints. Standardized all endpoints to use `start_date` and `end_date`. Verified engine script independence.
+171. - [x] **Implement AI Analysis**: Added `/instagram/post-analyze` and `/api/users/analyze` endpoints.
+172. - [x] **Database Update**: Added `analyze_comments` table and `sentiment` field.
+173. - [x] **Background Worker**: Implemented async processing for Llama analysis.
 
 ## 10. Testing Checklist
+- [x] **AI Analysis Flow**:
+    -   Trigger analysis -> Job ID returned.
+    -   Poll status -> Returns progress %.
+    -   Completion -> `sentiment` field updated in DB.
 - [x] **Database Connection**: Verify Prisma connects to Postgres with Schema support.
 - [x] **Initial Sync**: Run `node engine/initial-sync.js` for a test project.
     -   *Expected*: DB populated with months of data.
 - [x] **Cron Scripts**: Run `node test/test-cron-scripts.js`.
     -   *Expected*: Account counts update, no errors.
 - [x] **API Endpoints**:
-    -   `GET /v1/instagram/account` -> Returns JSON with follower counts.
-    -   `GET /v1/instagram/posts` -> Returns list of posts with metrics.
-    -   `GET /v1/instagram/reels` -> Returns list of reels with metrics.
-    -   `GET /v1/instagram/stories` -> Returns list of stories with metrics.
+    -   `GET /instagram/account` -> Returns JSON with follower counts.
+    -   `GET /instagram/posts` -> Returns list of posts with metrics.
+    -   `GET /instagram/reels` -> Returns list of reels with metrics.
+    -   `GET /instagram/stories` -> Returns list of stories with metrics.
 - [x] **Manual Sync Verification**:
     -   Run sync for past dates.
     -   *Expected*: `instagram_account` table populated with daily rows.

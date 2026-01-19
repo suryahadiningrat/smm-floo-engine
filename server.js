@@ -21,9 +21,9 @@ app.get('/', (req, res) => {
 });
 
 // Mount Routes
-app.use('/api/v1', analyticsRoutes); // Changed base path to separate concerns
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/projects', projectRoutes);
+app.use('/api', analyticsRoutes); // Changed base path to separate concerns
+app.use('/api/users', userRoutes);
+app.use('/api/projects', projectRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
@@ -38,5 +38,5 @@ app.use((err, req, res, next) => {
 // Start Server
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-    console.log(`Endpoints available at http://localhost:${PORT}/api/v1/...`);
+    console.log(`Endpoints available at http://localhost:${PORT}/api/...`);
 });

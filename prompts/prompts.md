@@ -2,17 +2,17 @@ Bangun sebuah REST API Service yang siap digunakan (ready-to-hit) menggunakan No
 
 PENTING: Struktur Endpoint: Jangan buat satu endpoint raksasa. Tolong pecah menjadi endpoint spesifik per platform agar modular. Buatlah route berikut:
 
-GET /api/v1/facebook/analytics
+GET /api/facebook/analytics
 
-GET /api/v1/twitter/analytics
+GET /api/twitter/analytics
 
-GET /api/v1/instagram/analytics (Wajib include data Feed & Stories)
+GET /api/instagram/analytics (Wajib include data Feed & Stories)
 
-GET /api/v1/tiktok/analytics
+GET /api/tiktok/analytics
 
-GET /api/v1/youtube/analytics
+GET /api/youtube/analytics
 
-GET /api/v1/linkedin/analytics
+GET /api/linkedin/analytics
 
 Requirements Teknis:
 

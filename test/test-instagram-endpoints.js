@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const BASE_URL = 'http://localhost:3001/api/v1';
+const BASE_URL = 'http://localhost:3001/api';
 
 const testEndpoints = async () => {
     console.log('Testing Instagram Endpoints...');

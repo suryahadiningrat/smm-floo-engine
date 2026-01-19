@@ -469,6 +469,199 @@ exports.getInstagramMetrics = async (req, res) => {
     }
 };
 
+// Background Worker for Analysis
+const runAnalysisBackground = async (analyzeId, projectId, contentId, keyword) => {
+    try {
+        console.log(`[Analysis Worker] Starting job ${analyzeId} for content ${contentId}`);
+
+        // 1. Get Caption
+        let caption = '';
+        const content = await prisma.instagramContent.findFirst({ where: { content_id: contentId } });
+        if (content) caption = content.caption;
+
+        // 2. Fetch Comments (only those without sentiment if we want incremental, but requirement says "analyze comments with sentiment null")
+        // However, if we want to re-analyze or analyze all, the prompt says "Engine Llama hanya menganalisis komentar dengan sentiment null".
+        const comments = await prisma.instagramComment.findMany({
+            where: {
+                content_id: contentId,
+                sentiment: null
+            },
+            select: { id: true, text: true, commenters_username: true } // Select necessary fields
+        });
+
+        if (comments.length === 0) {
+            console.log(`[Analysis Worker] No pending comments for ${contentId}`);
+            await prisma.analyzeComments.update({
+                where: { id: analyzeId },
+                data: { percentage: 100, json_path: 'No comments to analyze' }
+            });
+            return;
+        }
+
+        // Update progress (started)
+        await prisma.analyzeComments.update({
+            where: { id: analyzeId },
+            data: { percentage: 10 }
+        });
+
+        // 3. Call AI Service
+        // Map comments to format expected by aiService (username, text)
+        const commentsForAi = comments.map(c => ({ username: c.commenters_username, text: c.text }));
+        
+        // Use existing aiService
+        const analysisResult = await aiService.analyzeSentiment(caption, keyword, commentsForAi);
+        
+        // 4. Update Database (sentiment field)
+        // analysisResult.results contains { index, sentiment, ... }
+        // Wait, aiService.analyzeBatch maps index to `startIndex + index`.
+        // I need to map back to database IDs.
+        // aiService.analyzeSentiment logic:
+        //   analyzeBatch(..., batch, i) -> batch is slice of comments.
+        //   index in result is `i + index_in_batch`.
+        //   So `results[k].index` corresponds to `comments[results[k].index]`.
+        
+        const updates = [];
+        if (analysisResult.results) {
+            for (const res of analysisResult.results) {
+                const commentIndex = res.index;
+                if (comments[commentIndex]) {
+                    const commentId = comments[commentIndex].id;
+                    const sentiment = res.sentiment || 'neutral';
+                    
+                    updates.push(prisma.instagramComment.update({
+                        where: { id: commentId },
+                        data: { sentiment: sentiment }
+                    }));
+                }
+            }
+            
+            // Execute updates in transaction or parallel
+            // For large batches, Promise.all might be heavy, but for now okay.
+            await prisma.$transaction(updates);
+        }
+
+        // 5. Save JSON Result
+        const resultDir = path.join(__dirname, '../storage/analysis_results');
+        if (!fs.existsSync(resultDir)) {
+            fs.mkdirSync(resultDir, { recursive: true });
+        }
+        const jsonPath = path.join(resultDir, `${analyzeId}_${contentId}.json`);
+        fs.writeFileSync(jsonPath, JSON.stringify(analysisResult, null, 2));
+
+        // 6. Complete Job
+        await prisma.analyzeComments.update({
+            where: { id: analyzeId },
+            data: { 
+                percentage: 100, 
+                json_path: jsonPath 
+            }
+        });
+
+        console.log(`[Analysis Worker] Job ${analyzeId} completed.`);
+
+    } catch (error) {
+        console.error(`[Analysis Worker] Failed job ${analyzeId}:`, error);
+        // Optional: Update job status to failed (percentage -1 or similar?)
+        // Keeping it simple for now.
+    }
+};
+
+exports.postAnalyzeInstagram = async (req, res) => {
+    try {
+        const { content_id, keyword } = req.body;
+        // Assume project_id 1 for now or get from auth/body.
+        // Prompt implies user context, let's look for project_id in body or default.
+        const projectId = req.body.project_id ? parseInt(req.body.project_id) : 1;
+
+        if (!content_id || !keyword) {
+            return res.status(400).json({ error: 'content_id and keyword are required' });
+        }
+
+        // Create Job
+        const job = await prisma.analyzeComments.create({
+            data: {
+                project_id: projectId,
+                content_id: content_id,
+                percentage: 0
+            }
+        });
+
+        // Trigger Background Process (Fire and Forget)
+        runAnalysisBackground(job.id, projectId, content_id, keyword);
+
+        res.status(202).json({
+            message: 'Analysis job started',
+            job_id: job.id,
+            content_id: content_id
+        });
+
+    } catch (error) {
+        console.error('Post Analyze Error:', error);
+        res.status(500).json({ error: 'Failed to start analysis' });
+    }
+};
+
+exports.getAnalyzeList = async (req, res) => {
+    try {
+        const projectId = req.query.project_id ? parseInt(req.query.project_id) : 1;
+        
+        const analyses = await prisma.analyzeComments.findMany({
+            where: { project_id: projectId },
+            orderBy: { created_at: 'desc' },
+            select: {
+                id: true,
+                content_id: true,
+                percentage: true,
+                created_at: true
+            }
+        });
+
+        // Format to match user requirement example somewhat
+        const formatted = analyses.map(a => ({
+            id: a.id,
+            content_id: a.content_id,
+            percentage: a.percentage,
+            created_at: a.created_at
+        }));
+
+        res.json(formatted);
+
+    } catch (error) {
+        console.error('Get Analyze List Error:', error);
+        res.status(500).json({ error: 'Failed to fetch analysis list' });
+    }
+};
+
+exports.getAnalyzeResult = async (req, res) => {
+    try {
+        const { analyze_id } = req.params;
+        const analysis = await prisma.analyzeComments.findUnique({
+            where: { id: parseInt(analyze_id) }
+        });
+
+        if (!analysis) {
+            return res.status(404).json({ error: 'Analysis not found' });
+        }
+
+        if (analysis.percentage < 100) {
+            return res.status(202).json({ status: 'processing', percentage: analysis.percentage });
+        }
+
+        if (!analysis.json_path || !fs.existsSync(analysis.json_path)) {
+            return res.status(404).json({ error: 'Result file not found' });
+        }
+
+        const rawData = fs.readFileSync(analysis.json_path, 'utf-8');
+        const jsonData = JSON.parse(rawData);
+
+        res.json(jsonData);
+
+    } catch (error) {
+        console.error('Get Analyze Result Error:', error);
+        res.status(500).json({ error: 'Failed to fetch result' });
+    }
+};
+
 exports.analyzeInstagramComments = async (req, res) => {
     try {
         const { post_id, keyword } = req.body;

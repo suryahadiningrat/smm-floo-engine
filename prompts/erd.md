@@ -101,8 +101,18 @@ Table metric.instagram_comments {
   text text
   comments_like integer [default: 0]
   comments_count integer [default: 0]
+  sentiment varchar [note: 'Hasil analisis sentiment (positive/neutral/negative)']
   created_at datetime
   fetched_at datetime [default: `now()`]
+}
+
+Table metric.analyze_comments {
+  id integer [primary key]
+  project_id integer
+  content_id varchar
+  percentage integer [default: 0]
+  json_path varchar
+  created_at datetime [default: `now()`]
 }
 
 Table metric.tiktok_account {

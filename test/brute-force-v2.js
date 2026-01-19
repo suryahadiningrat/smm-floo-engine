@@ -5,7 +5,7 @@ const BLOG_ID = '3411718';
 const USER_ID = '1996313';
 const USER_TOKEN = process.env.METRICOOL_USER_TOKEN;
 const BASE_URL_V2 = 'https://app.metricool.com/api/v2';
-const BASE_URL_V1 = 'https://app.metricool.com/api/v1';
+const BASE_URL_V1 = 'https://app.metricool.com/api';
 
 const combos = [
     { base: BASE_URL_V2, path: 'analytics/instagram', params: {} },

@@ -48,6 +48,7 @@ model Project {
   instagramContents        InstagramContent[]
   instagramContentSummaries InstagramContentSummary[]
   instagramComments        InstagramComment[]
+  analyzeComments          AnalyzeComments[]
   platformAccountSummaries PlatformAccountSummary[]
   tiktokAccounts           TiktokAccount[]
   tiktokContents           TiktokContent[]
@@ -165,6 +166,7 @@ model InstagramComment {
   text                String?  @db.Text
   comments_like       Int      @default(0)
   comments_count      Int      @default(0)
+  sentiment           String?
   created_at          DateTime
   fetched_at          DateTime @default(now())
   project             Project  @relation(fields: [project_id], references: [id])
@@ -289,4 +291,17 @@ model YoutubeContentSummary {
 
   @@schema("metric")
   @@map("youtube_content_summary")
+}
+
+model AnalyzeComments {
+  id          Int      @id @default(autoincrement())
+  project_id  Int
+  content_id  String
+  percentage  Int      @default(0)
+  json_path   String?
+  created_at  DateTime @default(now())
+  project     Project  @relation(fields: [project_id], references: [id])
+
+  @@schema("metric")
+  @@map("analyze_comments")
 }
