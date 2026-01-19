@@ -21,7 +21,7 @@ app.get('/', (req, res) => {
 });
 
 // Mount Routes
-app.use('/api/v1/analytics', analyticsRoutes); // Changed base path to separate concerns
+app.use('/api/v1', analyticsRoutes); // Changed base path to separate concerns
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/projects', projectRoutes);
 

@@ -9,8 +9,6 @@ const USER_ID = process.env.METRICOOL_USER_ID;
 
 // Configurable Account Identifiers
 const INSTAGRAM_USERNAME = process.env.INSTAGRAM_USERNAME || 'fdrtire';
-const FACEBOOK_PAGE_NAME = process.env.FACEBOOK_PAGE_NAME || 'FDR Tire';
-const FACEBOOK_PAGE_ID = process.env.FACEBOOK_PAGE_ID || '285186971559191';
 
 // Helper: Get Project
 const getProject = async (reqProjectId) => {
@@ -31,13 +29,6 @@ const formatToIsoDate = (dateStr, isEndOfDay = false) => {
     if (!dateStr) return null;
     if (dateStr.includes('T')) return dateStr; // Already ISO
     return isEndOfDay ? `${dateStr}T23:59:59` : `${dateStr}T00:00:00`;
-};
-
-// Helper: Validate dates
-const validateDates = (from, to) => {
-    if (!from || !to) {
-        throw new Error('Parameters "from" and "to" are required.');
-    }
 };
 
 // Helper: Fetch data from Metricool
@@ -74,62 +65,6 @@ const fetchMetricoolData = async (platform, type, from, to) => {
         }
         return [];
     }
-};
-
-
-// Helper: Fetch competitors data to get account metadata (followers, etc.)
-const fetchCompetitorsData = async (platform, from, to) => {
-    try {
-        const endpoint = `${METRICOOL_API_BASE_URL}/analytics/competitors/${platform}`;
-        const params = {
-            blogId: BLOG_ID,
-            userId: USER_ID,
-            from: formatToIsoDate(from),
-            to: formatToIsoDate(to, true),
-            timezone: 'Asia/Jakarta', // Hardcoded for now based on blog metadata
-            limit: 20
-        };
-
-        console.log(`[DEBUG] Fetching ${platform} competitors from: ${endpoint}`);
-
-        const response = await axios.get(endpoint, {
-            params,
-            headers: {
-                'X-Mc-Auth': USER_TOKEN,
-                'Content-Type': 'application/json'
-            },
-            timeout: 15000
-        });
-
-        return response.data.data || [];
-    } catch (error) {
-        console.warn(`[WARNING] Failed to fetch competitors for ${platform}: ${error.message}`);
-        return [];
-    }
-};
-
-// Helper: Get account growth data (followers, following) for a specific date
-const getAccountGrowthData = async (platform, dateStr) => {
-    try {
-        const data = await fetchCompetitorsData(platform, dateStr, dateStr);
-        // Try to find by known usernames or generic check
-        const myAccount = data.find(c => 
-            c.screenName === INSTAGRAM_USERNAME || 
-            c.username === INSTAGRAM_USERNAME || 
-            c.screenName === FACEBOOK_PAGE_NAME || 
-            (c.providerId && (c.providerId.includes(FACEBOOK_PAGE_ID) || c.providerId === INSTAGRAM_USERNAME))
-        );
-        return myAccount ? { followers: myAccount.followers, following: myAccount.following } : null;
-    } catch (error) {
-        console.warn(`[WARNING] Failed to get account data for ${dateStr}: ${error.message}`);
-        return null;
-    }
-};
-
-const addDays = (dateStr, days) => {
-    const date = new Date(dateStr);
-    date.setDate(date.getDate() + days);
-    return date.toISOString().split('T')[0];
 };
 
 const aiService = require('../services/aiService');
@@ -682,232 +617,14 @@ exports.analyzeInstagramComments = async (req, res) => {
     }
 };
 
-exports.getFacebookAnalytics = async (req, res) => {
-    try {
-        const { from, to } = req.query;
-        validateDates(from, to);
-
-        const [posts, stories, reels] = await Promise.all([
-            fetchMetricoolData('facebook', 'posts', from, to),
-            fetchMetricoolData('facebook', 'stories', from, to),
-            fetchMetricoolData('facebook', 'reels', from, to)
-        ]);
-
-        // Aggregation
-        let totalLikes = 0;
-        let totalComments = 0;
-        let totalShares = 0;
-        let totalViews = 0; // Impressions
-        let totalSaves = 0; // Not available usually
-
-        posts.forEach(post => {
-            totalLikes += (post.reactions || 0); // FB uses reactions
-            totalComments += (post.comments || 0);
-            totalShares += (post.shares || 0);
-            totalViews += (post.impressions || 0);
-        });
-        
-        // Stories metrics
-        let storyViews = 0;
-        stories.forEach(story => {
-             // FB Stories from API sample don't show metrics, but we sum if available
-             storyViews += (story.impressions || 0);
-        });
-
-        let totalFollowers = 0;
-        let totalFollowing = 0;
-        let totalUnfollow = 0;
-        let totalPageView = 0;
-        let netFollowerChange = 0;
-
-        // Try dynamic fetch first (Growth = End - Start)
-        // Apply same offset logic as Instagram (assuming consistency in Competitors API)
-        const offset = 2;
-        const targetEndDate = addDays(to, offset);
-        const targetStartDatePrev = addDays(from, offset - 1);
-
-        const startData = await getAccountGrowthData('facebook', targetStartDatePrev);
-        const endData = await getAccountGrowthData('facebook', targetEndDate);
-
-        if (startData && endData) {
-            totalFollowers = endData.followers; // Absolute
-            totalFollowing = endData.following || 0; // Absolute
-            netFollowerChange = endData.followers - startData.followers; // Growth
-            
-            // If we had totalUnfollow data from API we'd use it, otherwise derive or 0
-             if (netFollowerChange < 0) {
-                totalUnfollow = Math.abs(netFollowerChange);
-            }
-        } else {
-            // Temporary Mock for specific date range due to missing endpoint
-            // User reported: Followers ~179k, Following 1, Net change -4
-            if (from === '2026-01-04' && to === '2026-01-05') {
-                const followersStart = 179028; // Jan 4
-                const followersEnd = 179024;   // Jan 5
-                const followingStart = 1;
-                const followingEnd = 1;
-
-                totalFollowers = followersEnd;
-                totalFollowing = followingEnd;
-                netFollowerChange = followersEnd - followersStart; // -4
-                
-                totalUnfollow = 4; // Derived from net change or explicitly set
-                totalPageView = 46;
-            }
-        }
-
-        const formattedData = {
-            platform: 'Facebook',
-            period: { from, to },
-            account_performance: {
-                total_followers: totalFollowers,
-                total_following: totalFollowing,
-                total_unfollow: totalUnfollow,
-                net_follower_change: netFollowerChange,
-                total_page_view: totalPageView,
-                total_post: posts.length,
-                total_reels: reels.length,
-                total_story: stories.length
-            },
-            post_performance: {
-                total_likes: totalLikes,
-                total_comment: totalComments,
-                total_share: totalShares,
-                total_view: totalViews,
-                total_save: totalSaves
-            },
-            story_performance: {
-                total_story_view: storyViews
-            }
-        };
-
-        res.json({
-            success: true,
-            data: formattedData
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
-    }
-};
-
-exports.getFacebookPosts = async (req, res) => {
-    try {
-        const { from, to } = req.query;
-        validateDates(from, to);
-
-        const posts = await fetchMetricoolData('facebook', 'posts', from, to);
-
-        const formattedPosts = posts.map(post => ({
-            post_id: post.postId,
-            post_url: post.link,
-            caption: post.text,
-            timestamp: post.created?.dateTime,
-            type: post.type,
-            likes: post.reactions || 0,
-            comments: post.comments || 0,
-            shares: post.shares || 0,
-            impressions_organic: post.impressionsOrganic || 0,
-            impressions_paid: post.impressionsPaid || 0,
-            impressions_unique_organic: post.impressionsUniqueOrganic || 0,
-            impressions_unique_paid: post.impressionsUniquePaid || 0,
-            clicks: post.clicks || 0,
-            engagement: post.engagement || 0,
-            media_url: post.picture
-        }));
-
-        res.json({
-            success: true,
-            data: formattedPosts
-        });
-    } catch (error) {
-        console.error('Error fetching Facebook posts:', error);
-        res.status(500).json({ error: 'Failed to fetch Facebook posts' });
-    }
-};
-
-exports.getFacebookStories = async (req, res) => {
-    try {
-        const { from, to } = req.query;
-        validateDates(from, to);
-
-        const stories = await fetchMetricoolData('facebook', 'stories', from, to);
-
-        const formattedStories = stories.map(story => ({
-            type: story.mediaType,
-            post_url: story.storyUrl,
-            timestamp: story.created?.dateTime,
-            media_url: story.thumbnailUrl,
-            // Metrics not present in sample, defaulting to null/0
-            impressions: story.impressions || 0,
-            replies: story.replies || 0,
-            exits: story.exits || 0
-        }));
-
-        res.json({
-            success: true,
-            data: formattedStories
-        });
-    } catch (error) {
-        console.error('Error fetching Facebook stories:', error);
-        res.status(500).json({ error: 'Failed to fetch Facebook stories' });
-    }
-};
-
-exports.getTwitterAnalytics = async (req, res) => {
-    try {
-        const { from, to } = req.query;
-        validateDates(from, to);
-
-        const posts = await fetchMetricoolData('twitter', 'posts', from, to);
-
-        let totalLikes = 0;
-        let totalComments = 0; // Replies
-        let totalShares = 0; // Retweets
-        let totalViews = 0; // Impressions
-        let totalSaves = 0;
-
-        posts.forEach(post => {
-            totalLikes += (post.likes || 0); // assuming standard fields
-            totalComments += (post.replies || post.comments || 0);
-            totalShares += (post.retweets || post.shares || 0);
-            totalViews += (post.impressions || 0);
-        });
-
-        const formattedData = {
-            platform: 'Twitter (X)',
-            period: { from, to },
-            account_performance: {
-                total_followers: 0,
-                total_following: 0,
-                total_unfollow: 0,
-                total_page_view: 0,
-                total_post: posts.length,
-                total_reels: 0,
-                total_story: 0
-            },
-            post_performance: {
-                total_likes: totalLikes,
-                total_comment: totalComments,
-                total_share: totalShares,
-                total_view: totalViews,
-                total_save: totalSaves
-            }
-        };
-
-        res.json(formattedData);
-    } catch (error) {
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
-    }
-};
-
-
-
 exports.getInstagramCommunity = async (req, res) => {
     try {
-        const { from, to } = req.query;
-        validateDates(from, to);
+        const { start_date, end_date } = req.query;
+        if (!start_date || !end_date) {
+            return res.status(400).json({ error: 'start_date and end_date are required' });
+        }
         // Direct fetch as no DB table exists for community
-        const community = await fetchMetricoolData('instagram', 'community', from, to);
+        const community = await fetchMetricoolData('instagram', 'community', start_date, end_date);
         res.json({ success: true, data: community });
     } catch (error) {
          res.status(500).json({ error: error.message || 'Internal Server Error' });
@@ -916,13 +633,16 @@ exports.getInstagramCommunity = async (req, res) => {
 
 exports.getInstagramAccount = async (req, res) => {
     try {
-        const { from, to, projectId } = req.query;
-        validateDates(from, to);
-        const project = await getProject(projectId);
+        const { start_date, end_date, project_id } = req.query;
+        if (!start_date || !end_date || !project_id) {
+            return res.status(400).json({ error: 'start_date, end_date, and project_id are required' });
+        }
+        
+        const project = await getProject(project_id);
         if (!project) return res.status(404).json({ error: 'Project not found' });
 
-        const fromDate = new Date(from); fromDate.setHours(0,0,0,0);
-        const toDate = new Date(to); toDate.setHours(23,59,59,999);
+        const fromDate = new Date(start_date); fromDate.setHours(0,0,0,0);
+        const toDate = new Date(end_date); toDate.setHours(23,59,59,999);
 
         // 1. Account Growth (Followers, Following)
         const endAccount = await prisma.instagramAccount.findFirst({
@@ -986,7 +706,7 @@ exports.getInstagramAccount = async (req, res) => {
 
         const formattedData = {
             platform: 'Instagram',
-            period: { from, to },
+            period: { start_date, end_date },
             account_performance: {
                 total_followers: followersEnd,
                 total_following: totalFollowing,
@@ -1016,146 +736,3 @@ exports.getInstagramAccount = async (req, res) => {
 };
 
 exports.getInstagramAnalytics = exports.getInstagramAccount;
-
-exports.getTiktokAnalytics = async (req, res) => {
-    try {
-        const { from, to } = req.query;
-        validateDates(from, to);
-
-        const posts = await fetchMetricoolData('tiktok', 'posts', from, to);
-
-        let totalLikes = 0;
-        let totalComments = 0;
-        let totalShares = 0;
-        let totalViews = 0;
-        let totalSaves = 0;
-
-        posts.forEach(post => {
-            totalLikes += (post.likes || 0);
-            totalComments += (post.comments || 0);
-            totalShares += (post.shares || 0);
-            totalViews += (post.views || 0);
-            totalSaves += (post.saves || 0);
-        });
-
-        const formattedData = {
-            platform: 'TikTok',
-            period: { from, to },
-            account_performance: {
-                total_followers: 0,
-                total_following: 0,
-                total_unfollow: 0,
-                total_page_view: 0,
-                total_post: posts.length,
-                total_reels: 0,
-                total_story: 0
-            },
-            post_performance: {
-                total_likes: totalLikes,
-                total_comment: totalComments,
-                total_share: totalShares,
-                total_view: totalViews,
-                total_save: totalSaves
-            }
-        };
-
-        res.json(formattedData);
-    } catch (error) {
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
-    }
-};
-
-exports.getYoutubeAnalytics = async (req, res) => {
-    try {
-        const { from, to } = req.query;
-        validateDates(from, to);
-
-        const posts = await fetchMetricoolData('youtube', 'posts', from, to);
-
-        let totalLikes = 0;
-        let totalComments = 0;
-        let totalShares = 0;
-        let totalViews = 0;
-        let totalSaves = 0;
-
-        posts.forEach(post => {
-            totalLikes += (post.likes || 0);
-            totalComments += (post.comments || 0);
-            totalShares += (post.shares || 0);
-            totalViews += (post.views || 0);
-            // totalSaves not applicable usually
-        });
-
-        const formattedData = {
-            platform: 'YouTube',
-            period: { from, to },
-            account_performance: {
-                total_followers: 0, // Subscribers
-                total_following: 0,
-                total_unfollow: 0,
-                total_page_view: 0,
-                total_post: posts.length,
-                total_reels: 0,
-                total_story: 0
-            },
-            post_performance: {
-                total_likes: totalLikes,
-                total_comment: totalComments,
-                total_share: totalShares,
-                total_view: totalViews,
-                total_save: totalSaves
-            }
-        };
-
-        res.json(formattedData);
-    } catch (error) {
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
-    }
-};
-
-exports.getLinkedinAnalytics = async (req, res) => {
-    try {
-        const { from, to } = req.query;
-        validateDates(from, to);
-
-        const posts = await fetchMetricoolData('linkedin', 'posts', from, to);
-
-        let totalLikes = 0;
-        let totalComments = 0;
-        let totalShares = 0;
-        let totalViews = 0;
-        let totalSaves = 0;
-
-        posts.forEach(post => {
-            totalLikes += (post.likes || 0);
-            totalComments += (post.comments || 0);
-            totalShares += (post.shares || 0);
-            totalViews += (post.impressions || post.views || 0);
-        });
-
-        const formattedData = {
-            platform: 'LinkedIn',
-            period: { from, to },
-            account_performance: {
-                total_followers: 0,
-                total_following: 0,
-                total_unfollow: 0,
-                total_page_view: 0,
-                total_post: posts.length,
-                total_reels: 0,
-                total_story: 0
-            },
-            post_performance: {
-                total_likes: totalLikes,
-                total_comment: totalComments,
-                total_share: totalShares,
-                total_view: totalViews,
-                total_save: totalSaves
-            }
-        };
-
-        res.json(formattedData);
-    } catch (error) {
-        res.status(500).json({ error: error.message || 'Internal Server Error' });
-    }
-};

@@ -167,6 +167,7 @@ The following workflows define the data acquisition and processing strategy.
 - [x] **Verify API Accuracy** against Metricool responses (Followers verified, Posts/Following constrained by API availability).
 - [x] **Fix Content Sync Accuracy**: Corrected `username` (fdrtire), `content_id` (shortcode), `caption`, and metrics (`saved` added).
 - [x] **Implement Content List Endpoints**: `/instagram/posts`, `/instagram/reels`, `/instagram/stories` with specific JSON structures.
+- [x] **Cleanup & Standardization**: Deleted unused non-Instagram endpoints. Standardized all endpoints to use `start_date` and `end_date`. Verified engine script independence.
 
 ## 10. Testing Checklist
 - [x] **Database Connection**: Verify Prisma connects to Postgres with Schema support.
