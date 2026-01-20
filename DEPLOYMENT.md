@@ -60,8 +60,8 @@ server {
     server_name your-domain.com; # REPLACE with your actual domain or IP
 
     location / {
-        # Proxy to the Docker container mapped to port 3000
-        proxy_pass http://127.0.0.1:3000;
+        # Proxy to the Docker container mapped to port 3018
+        proxy_pass http://127.0.0.1:3018;
         
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;

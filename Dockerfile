@@ -17,10 +17,10 @@ COPY . .
 RUN npx prisma generate
 
 # Expose the port the app runs on
-EXPOSE 3000
+EXPOSE 3018
 
 # Define environment variables (can be overridden by docker-compose)
-ENV PORT=3000
+ENV PORT=3018
 
 # Start the application
 CMD [ "node", "server.js" ]

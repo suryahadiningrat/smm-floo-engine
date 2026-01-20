@@ -5,7 +5,7 @@ const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3018;
 
 // Middleware
 app.use(express.json());
@@ -36,7 +36,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
-    console.log(`Endpoints available at http://localhost:${PORT}/api/...`);
+    console.log(`Endpoints available at http://0.0.0.0:${PORT}/api/...`);
 });
