@@ -12,6 +12,15 @@ datasource db {
 }
 
 // Master Tables
+enum Role {
+  SUPERADMIN
+  ADMIN
+  USER
+
+  @@map("enum_users_role")
+  @@schema("master")
+}
+
 model Plan {
   id            Int       @id @default(autoincrement())
   name          String
@@ -31,7 +40,7 @@ model User {
   email      String
   username   String
   password   String?
-  role       String?
+  role       Role?
   refresh_token String?
   created_at DateTime  @default(now())
   updated_at DateTime? @updatedAt
