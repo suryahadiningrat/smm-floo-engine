@@ -13,10 +13,12 @@ datasource db {
 
 // Master Tables
 model Plan {
-  id            Int     @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   name          String
-  price         Int
+  price         Decimal   @db.Decimal(10, 2)
   project_limit Int
+  created_at    DateTime  @default(now())
+  updated_at    DateTime? @updatedAt
   users         User[]
 
   @@schema("master")
