@@ -4,13 +4,23 @@ const prisma = require('../utils/prisma');
 
 async function run() {
     try {
-        // Get project ID (assuming ID 1 or find by name)
-        const project = await prisma.project.findFirst({
-            where: { slug: 'fdrtire' } // Adjust if needed
-        });
+        // Get slug from command line argument
+        const targetSlug = process.argv[2];
+
+        let project;
+        if (targetSlug) {
+            project = await prisma.project.findFirst({
+                where: { slug: targetSlug }
+            });
+        } else {
+            // Default: Find first project if no argument (or handle all - but init is heavy)
+            console.log('No slug provided, finding first available project...');
+            project = await prisma.project.findFirst();
+        }
 
         if (!project) {
             console.error('Project not found');
+            console.log('Usage: node engine/run-initial-sync.js <project-slug>');
             return;
         }
 

@@ -28,6 +28,30 @@ const createProject = async (req, res) => {
   }
 };
 
+const triggerSync = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const project = await prisma.project.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!project) {
+      return res.status(404).json({ status: 'error', message: 'Project not found' });
+    }
+
+    // Trigger async sync
+    engine.syncProject(project.id);
+    
+    res.status(200).json({ 
+      status: 'success', 
+      message: `Initial sync triggered for project ${project.name}` 
+    });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+};
+
 module.exports = {
-  createProject
+  createProject,
+  triggerSync
 };
