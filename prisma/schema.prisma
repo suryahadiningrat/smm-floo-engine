@@ -38,7 +38,7 @@ model User {
   id         Int       @id @default(autoincrement())
   plan_id    Int
   email      String    @unique
-  username   String
+  username   String    @unique
   password   String?
   role       Role?
   refresh_token String?
