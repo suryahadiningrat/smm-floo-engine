@@ -148,6 +148,7 @@ The following workflows define the data acquisition and processing strategy.
 -   **Database**: PostgreSQL
 -   **ORM**: Prisma (v7.2.0) with `@prisma/adapter-pg` and Multi-Schema support.
 -   **Scheduling**: System Crontab (Linux/Unix).
+-   **Deployment**: Docker & Docker Compose OR Git/PM2/Nginx.
 
 ## 9. Tasks (Kanban)
 
@@ -181,8 +182,15 @@ The following workflows define the data acquisition and processing strategy.
 171. - [x] **Implement AI Analysis**: Added `/instagram/post-analyze` and `/api/users/analyze` endpoints.
 172. - [x] **Database Update**: Added `analyze_comments` table and `sentiment` field.
 173. - [x] **Background Worker**: Implemented async processing for Llama analysis.
+137. - [x] **Docker Support**: Created `Dockerfile` and `docker-compose.yml` with Ollama integration and model setup script.
+138. - [x] **PM2 Deployment**: Created `ecosystem.config.js` and `DEPLOYMENT.md` for manual Git/PM2/Nginx setup.
 
 ## 10. Testing Checklist
+- [x] **Docker Deployment**:
+    -   `docker compose up -d`
+    -   `./setup-models.sh` (Pulls Llama models)
+    -   Verify API at `http://localhost:3000`
+- [x] **Barcode Reading**:
 - [x] **AI Analysis Flow**:
     -   Trigger analysis -> Job ID returned.
     -   Poll status -> Returns progress %.

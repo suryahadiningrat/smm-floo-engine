@@ -2,3 +2,4 @@
 node_modules
 .trae
 package-lock.json
+logs/

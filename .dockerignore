@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+Dockerfile
+docker-compose.yml
+.git
+.env
+storage/analysis_results/*
+!storage/analysis_results/.gitkeep
+test
