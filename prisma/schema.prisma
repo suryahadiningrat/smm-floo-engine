@@ -28,6 +28,7 @@ model User {
   plan_id    Int
   email      String
   username   String
+  refresh_token String? // Updated from 'token' to 'refresh_token' per user requirement
   created_at DateTime  @default(now())
   plan       Plan      @relation(fields: [plan_id], references: [id])
   projects   Project[]

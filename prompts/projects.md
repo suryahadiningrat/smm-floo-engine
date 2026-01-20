@@ -84,6 +84,10 @@ The following workflows define the data acquisition and processing strategy.
     -   **Linking**: Linked to `content_id` by matching Shortcode extracted from post link (e.g., `instagram.com/p/SHORTCODE`).
     -   **Deduplication**: Checks composite key (project_id, content_id, commenters_username, text, created_at).
 
+87.  **Security**:
+    -   **Authentication**: Database Token mechanism. Requires `AUTH-TOKEN-KEY` header matching `master.users.refresh_token` in database.
+    -   **Rate Limiting**: 100 requests per 15 minutes per IP.
+
 ## 6. Project Structure (File Tree)
 ```
 /
@@ -149,6 +153,10 @@ The following workflows define the data acquisition and processing strategy.
 -   **ORM**: Prisma (v7.2.0) with `@prisma/adapter-pg` and Multi-Schema support.
 -   **Scheduling**: System Crontab (Linux/Unix).
 -   **Deployment**: Docker & Docker Compose (Reversed Proxied by Nginx).
+-   **Libraries**:
+    -   `express`: Web server framework.
+    -   `express-rate-limit`: Basic rate limiting middleware.
+    -   `axios`: HTTP client for external API requests.
 
 ## 9. Tasks (Kanban)
 
@@ -183,9 +191,14 @@ The following workflows define the data acquisition and processing strategy.
 172. - [x] **Database Update**: Added `analyze_comments` table and `sentiment` field.
 173. - [x] **Background Worker**: Implemented async processing for Llama analysis.
 137. - [x] **Docker Support**: Created `Dockerfile` and `docker-compose.yml` with Ollama integration and model setup script.
-138. - [x] **Deployment Guide**: Updated `DEPLOYMENT.md` for Docker + Nginx Reverse Proxy strategy.
+139. - [x] **Rate Limiting**: Implemented `express-rate-limit` to handle high traffic (100 req/15min).
+140. - [x] **Authentication**: Implemented `AUTH-TOKEN-KEY` middleware verifying against `master.users.refresh_token`.
 
 ## 10. Testing Checklist
+- [x] **Authentication**:
+    -   Requests without `AUTH-TOKEN-KEY` -> 401 Unauthorized.
+    -   Requests with valid token (in DB) -> 200 OK.
+    -   Requests with invalid token -> 401 Unauthorized.
 - [x] **Docker Deployment**:
     -   `docker compose up -d`
     -   `./setup-models.sh` (Pulls Llama models)

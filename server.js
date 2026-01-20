@@ -1,5 +1,7 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+const prisma = require('./utils/prisma');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoutes');
@@ -7,11 +9,63 @@ const projectRoutes = require('./routes/projectRoutes');
 const app = express();
 const PORT = process.env.PORT || 3018;
 
+// Rate Limiter
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: {
+        status: 'error',
+        message: 'Too many requests from this IP, please try again after 15 minutes'
+    }
+});
+
+// Apply rate limiting to all requests
+app.use(limiter);
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Basic Route
+// Auth Middleware
+const authMiddleware = async (req, res, next) => {
+    const authToken = req.headers['auth-token-key'];
+    
+    if (!authToken) {
+        return res.status(401).json({
+            status: 'error',
+            message: 'Unauthorized: Missing AUTH-TOKEN-KEY header'
+        });
+    }
+
+    try {
+        // Validate token against database (using refresh_token)
+        const user = await prisma.user.findFirst({
+            where: {
+                refresh_token: authToken
+            }
+        });
+
+        if (user) {
+            req.user = user; // Attach user context
+            next();
+        } else {
+            res.status(401).json({
+                status: 'error',
+                message: 'Unauthorized: Invalid AUTH-TOKEN-KEY'
+            });
+        }
+    } catch (error) {
+        console.error('Auth Middleware Error:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Internal Server Error during authentication'
+        });
+    }
+};
+
+// Basic Route (Public)
 app.get('/', (req, res) => {
     res.json({
         message: 'Metricool Analytics Middleware API is running.',
@@ -20,10 +74,10 @@ app.get('/', (req, res) => {
     });
 });
 
-// Mount Routes
-app.use('/api', analyticsRoutes); // Changed base path to separate concerns
-app.use('/api/users', userRoutes);
-app.use('/api/projects', projectRoutes);
+// Mount Routes (Protected)
+app.use('/api', authMiddleware, analyticsRoutes); // Changed base path to separate concerns
+app.use('/api/users', authMiddleware, userRoutes);
+app.use('/api/projects', authMiddleware, projectRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
