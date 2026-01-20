@@ -1,124 +1,110 @@
-# Deployment Guide (Git + PM2 + Nginx)
+# Deployment Guide (Docker + Nginx)
 
-This guide covers how to deploy the Metricool API Middleware manually on a Linux server (Ubuntu/Debian) using Git, PM2, and Nginx.
+This guide covers how to deploy the Metricool API Middleware using **Docker Compose** and expose it via **Nginx** (Reverse Proxy) on a Linux server.
 
 **Prerequisites:**
--   **Node.js** (v18 or v20 LTS)
--   **PostgreSQL** (Managed or Local)
--   **Ollama** (Required for AI features)
--   **Nginx** (Web Server)
+-   **Docker Engine** & **Docker Compose**
+-   **Nginx** (Installed on the host machine)
+-   **Git**
 
 ---
 
-## 1. Server Setup (One-time)
+## 1. Application Deployment (Docker)
 
-### Install Node.js & PM2
-```bash
-# Install Node.js 20
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Install PM2 globally
-sudo npm install -g pm2
-```
-
-### Install Ollama (AI Engine)
-Since this app relies on local AI models, you must install Ollama on the host.
-```bash
-# Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh
-
-# Pull required models
-ollama pull llama3.2
-ollama pull llama3.2-vision
-```
-*Note: Ensure your server has enough RAM (at least 8GB recommended for Llama models).*
-
----
-
-## 2. Application Deployment
-
-### Clone & Install
+### Clone & Setup
 ```bash
 # Clone repository
 git clone <your-repo-url> metricool-api
 cd metricool-api
 
-# Install dependencies
-npm install
-
-# Generate Prisma Client
-npx prisma generate
-```
-
-### Environment Configuration
-Create a `.env` file based on the example:
-```bash
+# Create environment file
 cp .env.example .env
 nano .env
 ```
-**Crucial Settings:**
+**Crucial .env Settings:**
 -   `DATABASE_URL`: Your PostgreSQL connection string.
--   `OLLAMA_HOST`: `http://127.0.0.1:11434` (Default for local install).
+    -   *If DB is on the host*: Use the host's IP (e.g., `172.17.0.1` or actual IP), NOT `localhost`.
+    -   *If DB is remote*: Use the remote connection string.
 
-### Start with PM2
-We use `ecosystem.config.js` for process management.
+### Start Containers
+This will start both the Node.js API and the internal Ollama service.
+
 ```bash
-# Start application in production mode
-pm2 start ecosystem.config.js --env production
-
-# Save PM2 list to respawn on reboot
-pm2 save
-pm2 startup
+# Build and start in detached mode
+docker compose up -d
 ```
+
+### Setup AI Models (First Time Only)
+The Ollama container starts empty. You need to pull the models into the running container.
+
+```bash
+# Make script executable
+chmod +x setup-models.sh
+
+# Run setup script
+./setup-models.sh
+```
+*This downloads Llama 3.2 and Llama 3.2 Vision.*
 
 ---
 
-## 3. Nginx Reverse Proxy (Optional but Recommended)
+## 2. Nginx Reverse Proxy Configuration
 
-Nginx handles SSL and port forwarding (removing the need to expose port 3000 directly).
+Configure Nginx on the **host machine** to forward traffic to the Docker container (running on port 3000).
 
-1.  **Install Nginx**: `sudo apt install nginx`
-2.  **Create Config**: `sudo nano /etc/nginx/sites-available/metricool-api`
+1.  **Create Config**: `sudo nano /etc/nginx/sites-available/metricool-api`
 
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com; # Change this
+    server_name your-domain.com; # REPLACE with your actual domain or IP
 
     location / {
-        proxy_pass http://localhost:3000;
+        # Proxy to the Docker container mapped to port 3000
+        proxy_pass http://127.0.0.1:3000;
+        
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
+        
+        # Forward real client IP
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
 
-3.  **Enable Site**:
+2.  **Enable Site**:
 ```bash
 sudo ln -s /etc/nginx/sites-available/metricool-api /etc/nginx/sites-enabled/
 sudo nginx -t
-sudo systemctl restart nginx
+sudo systemctl reload nginx
 ```
 
 ---
 
-## 4. Maintenance & Updates
+## 3. Maintenance
 
-To update the application later:
-
+### Updating the Application
 ```bash
 # 1. Pull latest code
 git pull origin main
 
-# 2. Install new deps (if any)
-npm install
-npx prisma generate
-npx prisma migrate deploy # If DB schema changed
+# 2. Rebuild and restart containers
+docker compose up -d --build
 
-# 3. Restart PM2
-pm2 restart metricool-api
+# 3. Clean up old images (Optional)
+docker image prune -f
+```
+
+### Logs
+```bash
+# View API logs
+docker compose logs -f app
+
+# View Ollama logs
+docker compose logs -f ollama
 ```
