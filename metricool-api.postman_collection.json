@@ -1,0 +1,452 @@
+{
+	"info": {
+		"_postman_id": "b3e64035-7b1e-42c2-9e8a-02c345391928",
+		"name": "Metricool Analytics Middleware API",
+		"description": "API Documentation for Metricool Analytics Middleware",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"testuser\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\",\n    \"plan_id\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Analysis History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users/analyze?project_id={{project_id}}&page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"analyze"
+							],
+							"query": [
+								{
+									"key": "project_id",
+									"value": "{{project_id}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Analysis Result",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users/analyze/:analyze_id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"analyze",
+								":analyze_id"
+							],
+							"variable": [
+								{
+									"key": "analyze_id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Projects",
+			"item": [
+				{
+					"name": "Create Project",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"user_id\": 1,\n    \"name\": \"My New Project\",\n    \"slug\": \"my-new-project\",\n    \"metricool_user_id\": \"USR_...\",\n    \"metricool_blog_id\": \"BLG_...\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/projects",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"projects"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Trigger Initial Sync",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/projects/:id/sync",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"projects",
+								":id",
+								"sync"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{project_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Instagram",
+			"item": [
+				{
+					"name": "Get Account Data",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/instagram/account?project_id={{project_id}}&start_date=2023-10-01&end_date=2023-10-31",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"instagram",
+								"account"
+							],
+							"query": [
+								{
+									"key": "project_id",
+									"value": "{{project_id}}"
+								},
+								{
+									"key": "start_date",
+									"value": "2023-10-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2023-10-31"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Community Data",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/instagram/community?project_id={{project_id}}&start_date=2023-10-01&end_date=2023-10-31",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"instagram",
+								"community"
+							],
+							"query": [
+								{
+									"key": "project_id",
+									"value": "{{project_id}}"
+								},
+								{
+									"key": "start_date",
+									"value": "2023-10-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2023-10-31"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Posts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/instagram/posts?project_id={{project_id}}&start_date=2023-10-01&end_date=2023-10-31",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"instagram",
+								"posts"
+							],
+							"query": [
+								{
+									"key": "project_id",
+									"value": "{{project_id}}"
+								},
+								{
+									"key": "start_date",
+									"value": "2023-10-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2023-10-31"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Reels",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/instagram/reels?project_id={{project_id}}&start_date=2023-10-01&end_date=2023-10-31",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"instagram",
+								"reels"
+							],
+							"query": [
+								{
+									"key": "project_id",
+									"value": "{{project_id}}"
+								},
+								{
+									"key": "start_date",
+									"value": "2023-10-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2023-10-31"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Stories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/instagram/stories?project_id={{project_id}}&start_date=2023-10-01&end_date=2023-10-31",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"instagram",
+								"stories"
+							],
+							"query": [
+								{
+									"key": "project_id",
+									"value": "{{project_id}}"
+								},
+								{
+									"key": "start_date",
+									"value": "2023-10-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2023-10-31"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Metrics (Overview)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/instagram/metrics?project_id={{project_id}}&start_date=2023-10-01&end_date=2023-10-31",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"instagram",
+								"metrics"
+							],
+							"query": [
+								{
+									"key": "project_id",
+									"value": "{{project_id}}"
+								},
+								{
+									"key": "start_date",
+									"value": "2023-10-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2023-10-31"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Analyze Post (AI)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"project_id\": {{project_id}},\n    \"post_id\": \"179123456789\",\n    \"content\": \"This is a sample post caption content to be analyzed by AI.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/instagram/post-analyze",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"instagram",
+								"post-analyze"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Analyze Sentiment (AI)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"project_id\": {{project_id}},\n    \"comments\": [\n        \"Great post!\",\n        \"I disagree with this.\",\n        \"This is amazing.\"\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/instagram/analysis/sentiment",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"instagram",
+								"analysis",
+								"sentiment"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{
+				"key": "value",
+				"value": "{{token}}",
+				"type": "string"
+			},
+			{
+				"key": "key",
+				"value": "AUTH-TOKEN-KEY",
+				"type": "string"
+			}
+		]
+	},
+	"event": [],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://api-smm.floothink.com",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "YOUR_REFRESH_TOKEN_HERE",
+			"type": "string"
+		},
+		{
+			"key": "project_id",
+			"value": "1",
+			"type": "string"
+		}
+	]
+}
