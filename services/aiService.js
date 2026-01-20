@@ -1,4 +1,5 @@
 const { Ollama } = require('ollama');
+const fs = require('fs');
 
 const ollama = new Ollama();
 
@@ -103,7 +104,49 @@ const analyzeSentiment = async (caption, keyword, comments) => {
     return { results: allResults };
 };
 
+/**
+ * Extract text/numbers from a barcode image using Llama Vision
+ * @param {string} imagePath - Path to the image file
+ * @returns {Promise<string>} - Extracted numbers
+ */
+const readBarcode = async (imagePath) => {
+    try {
+        if (!fs.existsSync(imagePath)) {
+            throw new Error(`Image not found at ${imagePath}`);
+        }
+
+        const imageBuffer = fs.readFileSync(imagePath);
+        const base64Image = imageBuffer.toString('base64');
+        
+        const response = await ollama.chat({
+            model: 'llama3.2-vision', // Requires a vision-capable model
+            messages: [
+                {
+                    role: 'user',
+                    content: 'Please look at this barcode image. Extract all the numbers you see below or inside the barcode. Return ONLY the numbers as a plain string, no spaces, no text.',
+                    images: [base64Image]
+                }
+            ],
+            stream: true
+        });
+
+        let fullContent = '';
+        for await (const part of response) {
+            fullContent += part.message.content;
+        }
+
+        return fullContent.trim();
+    } catch (error) {
+        console.error('[AI Service] Barcode reading failed:', error.message);
+        if (error.cause) {
+            console.error('[AI Service] Cause:', error.cause);
+        }
+        throw error;
+    }
+};
+
 module.exports = {
-    analyzeSentiment
+    analyzeSentiment,
+    readBarcode
 };
 

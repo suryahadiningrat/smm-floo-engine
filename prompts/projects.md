@@ -35,7 +35,8 @@ The following workflows define the data acquisition and processing strategy.
 ### D. AI Analysis (Sentiment)
 1.  **Trigger**: User triggers analysis for a specific post via `/instagram/post-analyze`.
 2.  **Processing**: Background job runs Llama 3.2 on comments with `sentiment` = null.
-3.  **Result**: Updates `sentiment` in `instagram_comments` and stores full JSON report in `storage/analysis_results`.
+3.  **Vision Capabilities**: `readBarcode` function uses `llama3.2-vision` to extract numbers from images.
+4.  **Result**: Updates `sentiment` in `instagram_comments` and stores full JSON report (with reasoning) in `storage/analysis_results/{analyze_id}_{content_id}.json`.
 
 ## 4. User Experience per page
 *Note: As this is an API-first project, "pages" refer to API Endpoint Groups consumed by the Client/Frontend.*
@@ -115,6 +116,10 @@ The following workflows define the data acquisition and processing strategy.
 ## 7. Logic & Flow per File
 -   **`server.js`**: Initializes Express app, connects to DB, sets up routes.
 -   **`services/metricoolService.js`**: Handles all Axios requests to Metricool. Includes retry logic and parameter formatting.
+-   **`services/aiService.js`**:
+    -   Wraps Ollama API interactions.
+    -   `analyzeSentiment`: Analyzes text comments (batch processing).
+    -   `readBarcode`: Extracts numbers from images using Vision model (Streaming response, Base64 input).
 -   **`engine/initial-sync.js`**:
     -   triggered manually or by project creation.
     -   Iterates date ranges to fetch full history (10 years).
