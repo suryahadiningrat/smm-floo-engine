@@ -42,7 +42,8 @@ const fetchAnalytics = async (platform, type, from, to, blogId, userId, userToke
 
         return response.data.data || [];
     } catch (error) {
-        console.warn(`[MetricoolService] Failed to fetch ${type} for ${platform}: ${error.message}`);
+        const errorDetails = error.response ? JSON.stringify(error.response.data) : error.message;
+        console.warn(`[MetricoolService] Failed to fetch ${type} for ${platform}: ${errorDetails}`);
         if (error.response && (error.response.status === 404 || error.response.status === 403)) {
             return [];
         }

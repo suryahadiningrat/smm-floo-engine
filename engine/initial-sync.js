@@ -504,11 +504,48 @@ const saveInstagramContent = async (projectId, items, type, usernameFallback, bl
             });
         }
 
-        // Trigger Comment Sync for this post if it has comments (Placeholder)
-        // We now do global comment sync, so this is less critical, but could still be useful for direct fetch if endpoint existed.
-        if (comment > 0) {
-             await metricoolService.fetchComments('instagram', contentId, blogId, userId, USER_TOKEN);
+        // Upsert Daily Snapshot in InstagramContent (Historical Data)
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+
+        const existingHistory = await prisma.instagramContent.findFirst({
+            where: {
+                project_id: projectId,
+                content_id: contentId,
+                created_at: {
+                    gte: todayStart,
+                    lte: todayEnd
+                }
+            }
+        });
+
+        const historyData = {
+            project_id: projectId,
+            content_id: contentId,
+            type,
+            username: usernameFallback,
+            caption,
+            media_url: mediaUrl,
+            published_at: publishedAt,
+            views, impression, reach, like, comment, share, saved, repost
+        };
+
+        if (existingHistory) {
+             await prisma.instagramContent.update({
+                where: { id: existingHistory.id },
+                data: historyData
+             });
+        } else {
+             await prisma.instagramContent.create({
+                data: {
+                    ...historyData,
+                    created_at: new Date() // Explicitly set creation time
+                }
+             });
         }
+
     }
 
     return minDate;
