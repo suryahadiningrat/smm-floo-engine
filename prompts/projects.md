@@ -219,8 +219,9 @@ The following workflows define the data acquisition and processing strategy.
     -   Applied deduplication logic to the synchronous `analyzeInstagramComments` endpoint (Test API).
     -   Added strict "EXPLICIT ONLY" rules for keyword matching to prevent hallucinations.
 - [x] **Docker Configuration**:
-    -   Updated `docker-compose.yml` to use `OLLAMA_MODEL=llama3.1`.
-    -   Updated `setup-models.sh` to pull `llama3.1` by default.
+    -   Updated `docker-compose.yml` to use `OLLAMA_MODEL=llama4` and `OLLAMA_VISION_MODEL=llama4`.
+    -   Updated `setup-models.sh` to pull `llama4` (Multimodal) by default.
+    -   Updated `aiService.js` to support dynamic vision model selection via env var.
 
 ## 10. Testing Checklist
 - [x] **Authentication**:

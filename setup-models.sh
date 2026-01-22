@@ -13,10 +13,11 @@ if [ -z "$(docker compose ps -q ollama)" ]; then
     exit 1
 fi
 
-echo "Pulling Llama 3.1 (Text)..."
-docker compose exec ollama ollama pull llama3.1
+echo "Pulling Llama 4 (Multimodal)..."
+docker compose exec ollama ollama pull llama4
 
-echo "Pulling Llama 3.2 Vision..."
-docker compose exec ollama ollama pull llama3.2-vision
+# Legacy fallback (optional)
+# echo "Pulling Llama 3.2 Vision..."
+# docker compose exec ollama ollama pull llama3.2-vision
 
 echo "All models pulled successfully!"

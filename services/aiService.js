@@ -175,7 +175,7 @@ const readBarcode = async (imagePath) => {
         const base64Image = imageBuffer.toString('base64');
         
         const response = await ollama.chat({
-            model: 'llama3.2-vision', // Requires a vision-capable model
+            model: process.env.OLLAMA_VISION_MODEL || 'llama3.2-vision', // Use env var or fallback
             messages: [
                 {
                     role: 'user',
