@@ -1,5 +1,6 @@
 const prisma = require('../utils/prisma');
 const metricoolService = require('../services/metricoolService');
+const { createNotification } = require('../services/notificationService');
 require('dotenv').config();
 
 const USER_TOKEN = process.env.METRICOOL_USER_TOKEN;
@@ -204,6 +205,11 @@ const processProject = async (project) => {
                 }
             }
             console.log(`[Engine] Updated ${posts.length} posts for project ${id}`);
+        }
+
+        // Notify user
+        if (project.user_id) {
+            await createNotification(project.user_id, `Account data fetch completed for project ${project.name}`);
         }
 
     } catch (error) {

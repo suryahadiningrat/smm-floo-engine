@@ -1,5 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const prisma = require('./utils/prisma');
 const analyticsRoutes = require('./routes/analyticsRoutes');
@@ -40,27 +41,15 @@ const authMiddleware = async (req, res, next) => {
     }
 
     try {
-        // Validate token against database (using refresh_token)
-        const user = await prisma.user.findFirst({
-            where: {
-                refresh_token: authToken
-            }
-        });
-
-        if (user) {
-            req.user = user; // Attach user context
-            next();
-        } else {
-            res.status(401).json({
-                status: 'error',
-                message: 'Unauthorized: Invalid AUTH-TOKEN-KEY'
-            });
-        }
+        // Validate token using JWT
+        const decoded = jwt.verify(authToken, process.env.JWT_SECRET);
+        req.user = decoded; // Attach decoded user context (usually contains userId/email)
+        next();
     } catch (error) {
-        console.error('Auth Middleware Error:', error);
-        res.status(500).json({
+        console.error('Auth Middleware Error:', error.message);
+        res.status(401).json({
             status: 'error',
-            message: 'Internal Server Error during authentication'
+            message: 'Unauthorized: Invalid or expired token'
         });
     }
 };

@@ -17,5 +17,8 @@ router.get('/instagram/metrics', analyticsController.getInstagramMetrics);
 // AI Analysis
 router.post('/instagram/analysis/sentiment', analyticsController.analyzeInstagramComments);
 router.post('/instagram/post-analyze', analyticsController.postAnalyzeInstagram);
+router.get('/instagram/analysis/list', analyticsController.getAnalyzeList);
+router.get('/instagram/analysis/result/:analyze_id', analyticsController.getAnalyzeResult);
+router.get('/instagram/analysis/result', analyticsController.getAnalyzeResult);
 
 module.exports = router;

@@ -211,6 +211,7 @@ Table metric.youtube_content_summary {
 
 Ref: master.plan.id < master.users.plan_id
 Ref: master.users.id < master.projects.user_id
+Ref: master.users.id < master.notifications.user_id
 Ref: master.projects.id < metric.instagram_account.project_id
 Ref: master.projects.id < metric.instagram_content.project_id
 Ref: master.projects.id < metric.tiktok_account.project_id

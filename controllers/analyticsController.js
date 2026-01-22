@@ -1,5 +1,8 @@
 const axios = require('axios');
 const prisma = require('../utils/prisma');
+const fs = require('fs');
+const path = require('path');
+const { createNotification } = require('../services/notificationService');
 require('dotenv').config();
 
 const METRICOOL_API_BASE_URL = 'https://app.metricool.com/api/v2';
@@ -481,13 +484,23 @@ const runAnalysisBackground = async (analyzeId, projectId, contentId, keyword) =
 
         // 2. Fetch Comments (only those without sentiment if we want incremental, but requirement says "analyze comments with sentiment null")
         // However, if we want to re-analyze or analyze all, the prompt says "Engine Llama hanya menganalisis komentar dengan sentiment null".
-        const comments = await prisma.instagramComment.findMany({
+        const rawComments = await prisma.instagramComment.findMany({
             where: {
                 content_id: contentId,
                 sentiment: null
             },
             select: { id: true, text: true, commenters_username: true } // Select necessary fields
         });
+
+        // Deduplicate comments based on text to prevent AI reprocessing identical spam/content
+        const uniqueCommentsMap = new Map();
+        rawComments.forEach(c => {
+            const key = c.text.trim(); // Normalize text
+            if (!uniqueCommentsMap.has(key)) {
+                uniqueCommentsMap.set(key, c);
+            }
+        });
+        const comments = Array.from(uniqueCommentsMap.values());
 
         if (comments.length === 0) {
             console.log(`[Analysis Worker] No pending comments for ${contentId}`);
@@ -541,12 +554,61 @@ const runAnalysisBackground = async (analyzeId, projectId, contentId, keyword) =
         }
 
         // 5. Save JSON Result
+        // Construct Final JSON with Summary and Detail
+        const results = analysisResult.results || [];
+        
+        let positiveCount = 0;
+        let negativeCount = 0;
+        let neutralCount = 0;
+        let relatedPostCount = 0;
+        let relatedKeywordCount = 0;
+        
+        const detailList = [];
+
+        results.forEach((r) => {
+            const originalIndex = typeof r.index === 'number' ? r.index : -1;
+            if (originalIndex < 0 || originalIndex >= comments.length) return;
+
+            const originalComment = comments[originalIndex];
+            
+            // Stats
+            if (r.sentiment === 'positive') positiveCount++;
+            else if (r.sentiment === 'negative') negativeCount++;
+            else neutralCount++; 
+
+            if (r.is_related_to_post) relatedPostCount++;
+            if (r.is_related_to_keyword) relatedKeywordCount++;
+
+            // Detail Item
+            detailList.push({
+                index: originalIndex,
+                comment: [originalComment.text], 
+                sentiment: r.sentiment || 'neutral',
+                is_related_to_post: r.is_related_to_post || false,
+                is_related_to_keyword: r.is_related_to_keyword || false
+            });
+        });
+
+        const finalOutput = {
+            results: {
+                keyword: keyword,
+                summary: {
+                    positive_sentiment: positiveCount,
+                    negative_sentiment: negativeCount,
+                    neutral_sentiment: neutralCount,
+                    relate_to_post_sentiment: relatedPostCount,
+                    relate_to_keyword_sentiment: relatedKeywordCount
+                },
+                detail: detailList
+            }
+        };
+
         const resultDir = path.join(__dirname, '../storage/analysis_results');
         if (!fs.existsSync(resultDir)) {
             fs.mkdirSync(resultDir, { recursive: true });
         }
         const jsonPath = path.join(resultDir, `${analyzeId}_${contentId}.json`);
-        fs.writeFileSync(jsonPath, JSON.stringify(analysisResult, null, 2));
+        fs.writeFileSync(jsonPath, JSON.stringify(finalOutput, null, 2));
 
         // 6. Complete Job
         await prisma.analyzeComments.update({
@@ -558,6 +620,12 @@ const runAnalysisBackground = async (analyzeId, projectId, contentId, keyword) =
         });
 
         console.log(`[Analysis Worker] Job ${analyzeId} completed.`);
+
+        // Notify user
+        const project = await prisma.project.findUnique({ where: { id: projectId } });
+        if (project && project.user_id) {
+            await createNotification(project.user_id, `Comment analysis completed for content ${contentId} (project ${project.name})`);
+        }
 
     } catch (error) {
         console.error(`[Analysis Worker] Failed job ${analyzeId}:`, error);
@@ -634,7 +702,12 @@ exports.getAnalyzeList = async (req, res) => {
 
 exports.getAnalyzeResult = async (req, res) => {
     try {
-        const { analyze_id } = req.params;
+        const analyze_id = req.params.analyze_id || req.query.analyze_id;
+
+        if (!analyze_id) {
+             return res.status(400).json({ error: 'analyze_id is required' });
+        }
+
         const analysis = await prisma.analyzeComments.findUnique({
             where: { id: parseInt(analyze_id) }
         });
@@ -689,13 +762,13 @@ exports.analyzeInstagramComments = async (req, res) => {
         }
 
         // 2. Fetch Comments
-        const comments = await prisma.instagramComment.findMany({
+        const rawComments = await prisma.instagramComment.findMany({
             where: { content_id: post_id },
             orderBy: { created_at: 'desc' },
             take: 100 // Limit to 100 for AI analysis to respect token limits/speed
         });
 
-        if (comments.length === 0) {
+        if (rawComments.length === 0) {
             return res.json({
                 positive_sentiment: 0,
                 negative_sentiment: 0,
@@ -710,6 +783,16 @@ exports.analyzeInstagramComments = async (req, res) => {
                 }
             });
         }
+
+        // Deduplicate comments based on text to prevent AI reprocessing identical spam/content
+        const uniqueCommentsMap = new Map();
+        rawComments.forEach(c => {
+            const key = c.text.trim(); // Normalize text
+            if (!uniqueCommentsMap.has(key)) {
+                uniqueCommentsMap.set(key, c);
+            }
+        });
+        const comments = Array.from(uniqueCommentsMap.values());
 
         // 3. AI Analysis
         // Map to simple structure for AI

@@ -2,8 +2,8 @@
 
 ## 1. Meta & Status
 - **Project Name**: Metricool API Middleware
-- **Version**: 1.0.2
-- **Last Updated**: 2026-01-19
+- **Version**: 1.0.4
+- **Last Updated**: 2026-01-22
 - **Status**: Active Development
 - **Lead Developer**: Trae (AI Assistant)
 - **Mandor**: Suryahadiningrat
@@ -21,11 +21,12 @@ The following workflows define the data acquisition and processing strategy.
 2.  **User Registration**: User registers an account.
 3.  **Project Creation**: User creates a project, providing Metricool credentials (`metricool_blog_id`, `metricool_user_id`).
 4.  **Initial Sync Trigger**: Upon saving credentials, the system automatically triggers `engine/initial-sync.js`.
+5.  **Notification**: System sends a notification to the user upon completion of sync or analysis tasks.
 
 ### B. Data Synchronization (Background)
-1.  **Initial History**: Fetches 10 years of historical data (Posts, Stories, Reels). Then, iterates day-by-day from the earliest content date to today to backfill `instagram_account` growth history (Followers, Posts).
-2.  **Continuous Monitoring (2-Hourly)**: Every 2 hours, `engine/fetch-account-data.js` runs to update account stats and today's post performance. It upserts the daily `instagram_account` row and updates `platform_account_summary` with the latest state.
-3.  **Daily Aggregation (00:00)**: Every day at midnight, `engine/daily-aggregation.js` captures the final state of the previous day's content and stores it in history tables.
+1.  **Initial History**: Fetches 10 years of historical data (Posts, Stories, Reels). Then, iterates day-by-day from the earliest content date to today to backfill `instagram_account` growth history (Followers, Posts). Sends notification on completion.
+2.  **Continuous Monitoring (2-Hourly)**: Every 2 hours, `engine/fetch-account-data.js` runs to update account stats and today's post performance. It upserts the daily `instagram_account` row and updates `platform_account_summary` with the latest state. Sends notification on completion.
+3.  **Daily Aggregation (00:00)**: Every day at midnight, `engine/daily-aggregation.js` captures the final state of the previous day's content and stores it in history tables. Sends notification on completion.
 
 ### C. Data Consumption (Frontend)
 1.  **Dashboard Access**: Frontend requests data via `v1/instagram/*` endpoints.
@@ -37,6 +38,7 @@ The following workflows define the data acquisition and processing strategy.
 2.  **Processing**: Background job runs Llama 3.2 on comments with `sentiment` = null.
 3.  **Vision Capabilities**: `readBarcode` function uses `llama3.2-vision` to extract numbers from images.
 4.  **Result**: Updates `sentiment` in `instagram_comments` and stores full JSON report (with reasoning) in `storage/analysis_results/{analyze_id}_{content_id}.json`.
+5.  **Notification**: System sends a notification to the user when analysis is complete.
 
 ## 4. User Experience per page
 *Note: As this is an API-first project, "pages" refer to API Endpoint Groups consumed by the Client/Frontend.*
@@ -58,6 +60,14 @@ The following workflows define the data acquisition and processing strategy.
     -   **Posts**: Returns `id`, `media_url`, `caption`, `date`, `views` (impression+views), `interaction` (likes+comments+shares), etc.
     -   **Reels**: Returns similar to posts plus `reposts`.
     -   **Stories**: Returns `id`, `media_url`, `impressions`, `reach`.
+
+### D. Dashboard - Comment Analysis
+-   **User Action**: Selects a post and triggers AI Sentiment Analysis.
+-   **API Call 1 (List)**: `GET /api/instagram/posts` (to select content)
+-   **API Call 2 (Start)**: `POST /api/instagram/post-analyze` (Body: `{ content_id, keyword, project_id }`)
+-   **API Call 3 (Monitor)**: `GET /api/instagram/analysis/list?project_id=...`
+-   **API Call 4 (Result)**: `GET /api/instagram/analysis/result?analyze_id=...` or `/result/:analyze_id`
+-   **Experience**: User selects a post -> Clicks "Analyze" -> Sees "Processing" status -> Receives Notification/Polls -> Views detailed Sentiment Report (Positive/Negative %, Key themes).
 
 ## 5. Logic & Business Rules
 1.  **Multi-Schema Strategy**:
@@ -84,9 +94,10 @@ The following workflows define the data acquisition and processing strategy.
     -   **Linking**: Linked to `content_id` by matching Shortcode extracted from post link (e.g., `instagram.com/p/SHORTCODE`).
     -   **Deduplication**: Checks composite key (project_id, content_id, commenters_username, text, created_at).
 
-87.  **Security**:
-    -   **Authentication**: Database Token mechanism. Requires `AUTH-TOKEN-KEY` header matching `master.users.refresh_token` in database.
-    -   **Rate Limiting**: 100 requests per 15 minutes per IP.
+87.97→87.  **Security**:
+98→    -   **Authentication**: JWT Token mechanism. Requires `AUTH-TOKEN-KEY` header containing a valid JWT signed with `JWT_SECRET`.
+99→    -   **Verification**: Token is verified using `jsonwebtoken` against the environment secret, bypassing database lookup for performance.
+100→    -   **Rate Limiting**: 100 requests per 15 minutes per IP.
 
 ## 6. Project Structure (File Tree)
 ```
@@ -105,8 +116,10 @@ The following workflows define the data acquisition and processing strategy.
 │   └── daily-aggregation.js    # Daily content aggregation
 ├── prisma/                     # Database
 │   └── schema.prisma           # DB Schema definition
-├── services/                   # Business Logic
+├──├── services/                   # Business Logic
 │   └── metricoolService.js     # Centralized Metricool API wrapper
+│   └── notificationService.js  # User Notification Service
+│   └── aiService.js            # AI Service wrapper
 ├── test/                       # Testing
 │   └── setup-and-test-sync.js  # End-to-end sync test
 │   └── test-cron-scripts.js    # Cron job validation
@@ -123,8 +136,10 @@ The following workflows define the data acquisition and processing strategy.
 -   **`services/aiService.js`**:
     -   Wraps Ollama API interactions.
     -   `analyzeSentiment`: Analyzes text comments (batch processing).
-    -   `readBarcode`: Extracts numbers from images using Vision model (Streaming response, Base64 input).
--   **`engine/initial-sync.js`**:
+126→    -   `readBarcode`: Extracts numbers from images using Vision model (Streaming response, Base64 input).
+127→-   **`services/notificationService.js`**:
+128→    -   Handles creation of user notifications (`notifications` table).
+129→-   **`engine/initial-sync.js`**:
     -   triggered manually or by project creation.
     -   Iterates date ranges to fetch full history (10 years).
     -   Populates `InstagramContent`.
@@ -192,12 +207,28 @@ The following workflows define the data acquisition and processing strategy.
 173. - [x] **Background Worker**: Implemented async processing for Llama analysis.
 137. - [x] **Docker Support**: Created `Dockerfile` and `docker-compose.yml` with Ollama integration and model setup script.
 139. - [x] **Rate Limiting**: Implemented `express-rate-limit` to handle high traffic (100 req/15min).
+- [x] **Notification System**: Created `notifications` table and integrated into all engine scripts (`initial-sync`, `fetch-account-data`, `daily-aggregation`, `analyticsController`).
 140. - [x] **Authentication**: Implemented `AUTH-TOKEN-KEY` middleware verifying against `master.users.refresh_token`.
+- [x] **Analysis Result Formatting**: Updated JSON structure to include `summary` and `detail` sections.
+- [x] **Fix AI Analysis Quality**:
+    -   Added deduplication logic in `analyticsController` to prevent processing identical comments.
+    -   Fixed `aiService` index mapping to prevent result misalignment and hallucinated duplicates.
+    -   Refined System Prompt for better consistency and stricter keyword relevance.
+- [x] **Upgrade AI Intelligence**:
+    -   Switched default model to `llama3.1` (8B) for better reasoning and context understanding.
+    -   Applied deduplication logic to the synchronous `analyzeInstagramComments` endpoint (Test API).
+    -   Added strict "EXPLICIT ONLY" rules for keyword matching to prevent hallucinations.
+- [x] **Docker Configuration**:
+    -   Updated `docker-compose.yml` to use `OLLAMA_MODEL=llama3.1`.
+    -   Updated `setup-models.sh` to pull `llama3.1` by default.
 
 ## 10. Testing Checklist
 - [x] **Authentication**:
     -   Requests without `AUTH-TOKEN-KEY` -> 401 Unauthorized.
-    -   Requests with valid token (in DB) -> 200 OK.
+    -   Requests with valid token (in DB) -> 200 OK.ed.
+- [x] **Notification System**:
+    -   Run `node test/verify-notification.js`.
+    -   *Expected*: New row in `notifications` table with correct message and usr_i
     -   Requests with invalid token -> 401 Unauthorized.
 - [x] **Docker Deployment**:
     -   `docker compose up -d`
@@ -222,3 +253,6 @@ The following workflows define the data acquisition and processing strategy.
     -   Run sync for past dates.
     -   *Expected*: `instagram_account` table populated with daily rows.
     -   *Expected*: `platform_account_summary` updated with latest data.
+- [x] **Notifications**:
+    -   Run test script or trigger engine.
+    -   *Expected*: New row in `notifications` table with correct message and user_id.

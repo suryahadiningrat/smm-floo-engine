@@ -8,6 +8,7 @@ services:
     environment:
       - NODE_ENV=production
       - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=llama3.1
       # DATABASE_URL should be provided in .env file
     env_file:
       - .env

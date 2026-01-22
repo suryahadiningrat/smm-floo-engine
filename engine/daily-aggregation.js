@@ -1,5 +1,6 @@
 const prisma = require('../utils/prisma');
 const metricoolService = require('../services/metricoolService');
+const { createNotification } = require('../services/notificationService');
 require('dotenv').config();
 
 const USER_TOKEN = process.env.METRICOOL_USER_TOKEN;
@@ -157,6 +158,11 @@ const processProjectDaily = async (project, dateStr) => {
                 }
                 console.log(`[Engine] Saved ${items.length} ${type} for project ${id}`);
             }
+        }
+
+        // Notify user
+        if (project.user_id) {
+            await createNotification(project.user_id, `Daily aggregation completed for project ${project.name} (${dateStr})`);
         }
 
     } catch (error) {

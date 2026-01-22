@@ -1,5 +1,6 @@
 const prisma = require('../utils/prisma');
 const metricoolService = require('../services/metricoolService');
+const { createNotification } = require('../services/notificationService');
 require('dotenv').config();
 
 const USER_TOKEN = process.env.METRICOOL_USER_TOKEN;
@@ -250,6 +251,11 @@ const syncProject = async (projectId, forceStartDate = null) => {
         }
 
         console.log(`[Engine] Initial sync completed for project ${projectId}`);
+        
+        // Notify user
+        if (project && project.user_id) {
+            await createNotification(project.user_id, `Initial sync completed for project ${project.name}`);
+        }
 
     } catch (error) {
         console.error(`[Engine] Error syncing project ${projectId}:`, error);
