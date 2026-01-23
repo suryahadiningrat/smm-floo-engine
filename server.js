@@ -6,6 +6,7 @@ const prisma = require('./utils/prisma');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoutes');
+const aiService = require('./services/aiService');
 
 const app = express();
 const PORT = process.env.PORT || 3018;
