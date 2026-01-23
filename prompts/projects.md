@@ -223,6 +223,7 @@ The following workflows define the data acquisition and processing strategy.
     -   Updated `setup-models.sh` to pull `llama4` (Multimodal) by default.
     -   Updated `aiService.js` to default to `llama4` for both text and vision tasks (replacing `llama3.1`/`llama3.2-vision`).
     -   Added explicit logging of the AI model version used during analysis in `aiService.js`.
+    -   Implemented **AI Model Warmup** on server startup to prevent "fetch failed" timeouts during initial requests (Cold Start mitigation).
 
 ## 10. Testing Checklist
 - [x] **Authentication**:

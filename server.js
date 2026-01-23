@@ -82,4 +82,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
     console.log(`Endpoints available at http://0.0.0.0:${PORT}/api/...`);
+    
+    // Warmup AI Model
+    aiService.warmup();
 });

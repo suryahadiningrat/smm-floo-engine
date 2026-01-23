@@ -204,8 +204,29 @@ const readBarcode = async (imagePath) => {
     }
 };
 
+/**
+ * Warmup the AI model to prevent cold start timeouts
+ */
+const warmup = async () => {
+    console.log(`[AI Service] Warming up model: ${DEFAULT_MODEL}...`);
+    try {
+        // Fire and forget, or wait? Better wait to ensure readiness logs appear.
+        // Use a very short timeout or simple prompt.
+        await ollama.chat({
+            model: DEFAULT_MODEL,
+            messages: [{ role: 'user', content: 'hi' }],
+            options: { num_predict: 1 } // Generate minimal tokens
+        });
+        console.log(`[AI Service] Model ${DEFAULT_MODEL} is ready!`);
+    } catch (error) {
+        console.warn(`[AI Service] Warmup failed for ${DEFAULT_MODEL}:`, error.message);
+        console.warn('[AI Service] This is expected if Ollama is just starting up. Retries will handle requests.');
+    }
+};
+
 module.exports = {
     analyzeSentiment,
-    readBarcode
+    readBarcode,
+    warmup
 };
 
