@@ -3,6 +3,9 @@ const fs = require('fs');
 
 const ollama = new Ollama({ host: process.env.OLLAMA_HOST || 'http://127.0.0.1:11434' });
 
+const DEFAULT_MODEL = process.env.OLLAMA_MODEL || 'llama4';
+const DEFAULT_VISION_MODEL = process.env.OLLAMA_VISION_MODEL || 'llama4';
+
 /**
  * Analyze a batch of comments
  */
@@ -65,7 +68,7 @@ ${commentsText}
 
     try {
         const response = await ollama.chat({
-            model: process.env.OLLAMA_MODEL || 'llama3.1', // Default to llama3.1 for better reasoning
+            model: DEFAULT_MODEL, // Default to llama4 for better reasoning
             messages: [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt }
@@ -175,7 +178,7 @@ const readBarcode = async (imagePath) => {
         const base64Image = imageBuffer.toString('base64');
         
         const response = await ollama.chat({
-            model: process.env.OLLAMA_VISION_MODEL || 'llama3.2-vision', // Use env var or fallback
+            model: DEFAULT_VISION_MODEL, // Use env var or fallback
             messages: [
                 {
                     role: 'user',

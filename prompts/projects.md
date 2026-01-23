@@ -218,10 +218,11 @@ The following workflows define the data acquisition and processing strategy.
     -   Switched default model to `llama3.1` (8B) for better reasoning and context understanding.
     -   Applied deduplication logic to the synchronous `analyzeInstagramComments` endpoint (Test API).
     -   Added strict "EXPLICIT ONLY" rules for keyword matching to prevent hallucinations.
-- [x] **Docker Configuration**:
+- [x] **Docker Configuration & AI Model Upgrade**:
     -   Updated `docker-compose.yml` to use `OLLAMA_MODEL=llama4` and `OLLAMA_VISION_MODEL=llama4`.
     -   Updated `setup-models.sh` to pull `llama4` (Multimodal) by default.
-    -   Updated `aiService.js` to support dynamic vision model selection via env var.
+    -   Updated `aiService.js` to default to `llama4` for both text and vision tasks (replacing `llama3.1`/`llama3.2-vision`).
+    -   Added explicit logging of the AI model version used during analysis in `aiService.js`.
 
 ## 10. Testing Checklist
 - [x] **Authentication**:
