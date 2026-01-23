@@ -16,31 +16,31 @@ const analyzeBatch = async (caption, keyword, commentsBatch, startIndex) => {
 Your goal is to categorize comments based on their impact on the Brand's image using Indonesian context and slang.
 
 DEFINITIONS:
-1. POSITIVE: Comments that enhance the brand image.
-   - Praise, support, excitement, or positive testimonials.
-   - Enthusiastic participation in contests (e.g., "Semoga menang", "Ikutan kak").
-   - Constructive positive feedback.
+1. POSITIVE: Comments that EXPLICITLY praise the Brand, Product, or Service.
+   - Direct compliments (e.g., "Ban FDR enak banget", "Admin ramah", "Produk terbaik").
+   - Expressing love/loyalty to the brand.
+   - Thanking the brand for a specific benefit/prize.
+   - *NOTE: Merely answering a quiz or telling a story is NOT positive.*
 
 2. NEGATIVE: Comments that damage the brand image.
-   - Mockery, insults, sarcasm, or hate speech (SARA/Political).
-   - Complaints, scam accusations, or dissatisfaction.
-   - "Hate comments" or attacks on the brand/admin.
+   - Mockery, insults, sarcasm, or hate speech.
+   - Complaints about product quality or service.
+   - Scam accusations or dissatisfaction.
 
-3. NEUTRAL: Comments with no significant impact on brand image.
-   - Questions (e.g., "Harganya berapa?", "Lokasi dimana?").
-   - Personal stories or facts unrelated to brand quality.
-   - Expressions of personal sadness (e.g., "Belum beruntung", "Yah gagal lagi") that do NOT blame the brand.
-   - Tagging friends only, spam, or irrelevant text.
-   - Poetic/Long reflections about life or riding that do not explicitly praise or attack the brand (unless they mention the brand positively).
+3. NEUTRAL: General engagement that is neither praise nor attack.
+   - Contest entries, answers to quizzes, or sharing personal stories (e.g., "Ritual saya sebelum riding adalah...", "Jawabannya A").
+   - Hope to win (e.g., "Semoga menang", "Wish me luck", "Bismillah").
+   - Participation (e.g., "Ikutan min", "Done rules").
+   - Tagging friends.
+   - Questions (e.g., "Harganya berapa?").
+   - "Semoga berkah" or general well-wishes that don't praise the product.
 
 IMPORTANT RULES:
-- Understand Indonesian slang and typos (e.g., "Reading" usually means "Riding" in motorcycle context).
-- "Belum beruntung" (Not lucky yet) is NEUTRAL, not Negative, unless it accuses the brand of cheating.
-- BE CONSISTENT: If multiple comments have very similar meaning, they should have the same sentiment.
-- IS_RELATED_TO_POST: True if the comment answers the prompt in the caption or discusses the topic.
-- IS_RELATED_TO_KEYWORD: True ONLY if the specific keyword "${keyword}" is EXPLICITLY mentioned in the text (case-insensitive).
-  - Example: If keyword is "wallet", "dompet" is OK. But "money", "rich", or "cleaning helmet" is FALSE.
-  - Do NOT assume relation just because the post is related. STRICT MATCH ONLY.
+- **STRICT POSITIVE**: Do NOT label a comment as POSITIVE just because it is long or polite. It MUST praise the brand/product.
+- **CONTEXT MATTERS**: "Ritual unik saya..." is NEUTRAL (it's a story). "Ritual unik saya pakai FDR karena awet" is POSITIVE (praises product).
+- Understand Indonesian slang.
+- IS_RELATED_TO_POST: True if the comment answers the prompt or discusses the content.
+- IS_RELATED_TO_KEYWORD: True ONLY if the keyword "${keyword}" is EXPLICITLY mentioned.
 - Output strictly in JSON format with a "results" array. No markdown.`;
 
     const userPrompt = `
