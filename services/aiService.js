@@ -6,6 +6,9 @@ const ollama = new Ollama({ host: process.env.OLLAMA_HOST || 'http://127.0.0.1:1
 const DEFAULT_MODEL = process.env.OLLAMA_MODEL || 'llama4';
 const DEFAULT_VISION_MODEL = process.env.OLLAMA_VISION_MODEL || 'llama4';
 
+console.log(`[AI Service] Configured OLLAMA_HOST: ${process.env.OLLAMA_HOST || 'http://127.0.0.1:11434'}`);
+console.log(`[AI Service] Configured Default Model: ${DEFAULT_MODEL}`);
+
 /**
  * Analyze a batch of comments
  */

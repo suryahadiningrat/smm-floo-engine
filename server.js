@@ -11,6 +11,9 @@ const aiService = require('./services/aiService');
 const app = express();
 const PORT = process.env.PORT || 3018;
 
+// Trust Proxy (Required for rate-limiter behind Nginx)
+app.set('trust proxy', 1);
+
 // Rate Limiter
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
