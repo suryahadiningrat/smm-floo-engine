@@ -225,6 +225,7 @@ The following workflows define the data acquisition and processing strategy.
     -   Added explicit logging of the AI model version used during analysis in `aiService.js`.
     -   Implemented **AI Model Warmup** on server startup to prevent "fetch failed" timeouts during initial requests (Cold Start mitigation).
     -   **Migration to Host AI (Hybrid)**: Updated `docker-compose.yml` to use `host.docker.internal` for Ollama, allowing the API (Docker) to utilize the Windows Host GPU instead of slow Hyper-V CPU inference.
+    -   **Fix DNS Resolution**: Added Google DNS (`8.8.8.8`, `1.1.1.1`) to `docker-compose.yml` to resolve `EAI_AGAIN` errors when connecting to external APIs (Metricool) from inside the container.
 
 ## 10. Testing Checklist
 - [x] **Authentication**:
