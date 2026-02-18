@@ -60,7 +60,7 @@ const fetchCompetitors = async (platform, from, to, blogId, userId, userToken) =
             from: formatToIsoDate(from),
             to: formatToIsoDate(to, true),
             timezone: 'Asia/Jakarta', // Should be dynamic ideally
-            limit: 20
+            limit: 100
         };
 
         const response = await axios.get(endpoint, {
@@ -84,9 +84,9 @@ const getAccountGrowth = async (platform, dateStr, blogId, userId, userToken, us
         const data = await fetchCompetitors(platform, dateStr, dateStr, blogId, userId, userToken);
         // Try to find by known usernames
         const myAccount = data.find(c => 
-            c.screenName === username || 
-            c.username === username || 
-            (c.providerId && c.providerId === username)
+            (c.screenName && c.screenName.toLowerCase() === username.toLowerCase()) || 
+            (c.username && c.username.toLowerCase() === username.toLowerCase()) || 
+            (c.providerId && String(c.providerId) === String(username))
         );
         return myAccount ? { 
             followers: myAccount.followers, 

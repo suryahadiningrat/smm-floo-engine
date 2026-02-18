@@ -151,7 +151,15 @@ const syncProject = async (projectId, forceStartDate = null) => {
                         USER_TOKEN
                     );
                     
-                    const myAccount = dailyDataRaw.find(c => c.screenName === username || c.username === username || (c.providerId && c.providerId === username));
+                    const myAccount = dailyDataRaw.find(c => 
+                        (c.screenName && c.screenName.toLowerCase() === username.toLowerCase()) || 
+                        (c.username && c.username.toLowerCase() === username.toLowerCase()) || 
+                        (c.providerId && String(c.providerId) === String(username))
+                    );
+
+                    if (!myAccount && dailyDataRaw.length > 0 && dayCursor.getDate() === 1) {
+                         console.warn(`[Engine] Warning: Account '${username}' not found in competitors list for ${dateStr}. Available: ${dailyDataRaw.map(c => c.screenName || c.username).join(', ')}`);
+                    }
 
                     if (myAccount) {
                         const LAG_DAYS = 2;
