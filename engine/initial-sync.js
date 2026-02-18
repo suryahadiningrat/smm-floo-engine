@@ -504,8 +504,7 @@ const saveInstagramContent = async (projectId, items, type, usernameFallback, bl
                     caption,
                     media_url: mediaUrl,
                     published_at: publishedAt,
-                    views, impression, reach, like, comment, share, saved, repost,
-                    created_at: new Date()
+                    views, impression, reach, like, comment, share, saved, repost
                 }
             });
         }

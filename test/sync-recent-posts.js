@@ -149,10 +149,10 @@ const run = async () => {
                     caption,
                     media_url: mediaUrl,
                     published_at: publishedAt,
-                    views, impression, reach, like, comment, share, saved, repost: 0,
-                    created_at: new Date()
+                    views, impression, reach, like, comment, share, saved, repost: 0
                 }
             });
+
             console.log(`Created Reel ${contentId}`);
         }
     }
