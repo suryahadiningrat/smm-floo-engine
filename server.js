@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
@@ -13,6 +14,9 @@ const PORT = process.env.PORT || 3018;
 
 // Trust Proxy (Required for rate-limiter behind Nginx)
 app.set('trust proxy', 1);
+
+// Enable CORS
+app.use(cors());
 
 // Rate Limiter
 const limiter = rateLimit({
